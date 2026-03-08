@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kahoot! Explorer - Risposte Live</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --accent: #3b82f6;
+            --glass: rgba(255, 255, 255, 0.05);
+            --correct: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid var(--glass);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #60a5fa, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        #quiz-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .question-card {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .question-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent);
+        }
+
+        .q-number {
+            font-size: 0.8rem;
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .q-text {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .answers {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .answer {
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+        }
+
+        .answer.correct {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: var(--correct);
+            color: var(--correct);
+        }
+
+        .answer-icon {
+            margin-right: 15px;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            font-size: 0.8rem;
+        }
+
+        .correct .answer-icon {
+            background: var(--correct);
+            color: white;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 100px;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid var(--glass);
+            border-top: 5px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 1.8rem; }
+            .question-card { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header id="quiz-header">
+            <h1 id="title">Kahoot! Viewer</h1>
+            <p class="status" id="quiz-status">In attesa del caricamento...</p>
+        </header>
+
+        <div id="quiz-content">
+            <div class="loading" id="loader">
+                <div class="loading-spinner"></div>
+                <p>Recupero risposte dal database...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const uuid = urlParams.get('uuid');
+
+            if (!uuid) {
+                showError("UUID Mancante", "Inserisci un UUID nel link per vedere le risposte.");
+                return;
+            }
+
+            try {
+                // Fetch data directly from Kahoot Public API
+                const response = await fetch(`https://create.kahoot.it/rest/kahoots/${uuid}`);
+                if (!response.ok) throw new Error("Impossibile trovare il quiz.");
+                
+                const data = await response.json();
+                renderQuiz(data);
+            } catch (error) {
+                showError("Errore", error.message);
+            }
+        });
+
+        function renderQuiz(data) {
+            document.getElementById('title').innerText = data.title || "Quiz Senza Titolo";
+            document.getElementById('quiz-status').innerText = `${data.questions.length} Domande Trovate`;
+            document.getElementById('loader').style.display = 'none';
+
+            const content = document.getElementById('quiz-content');
+            
+            data.questions.forEach((q, index) => {
+                const card = document.createElement('div');
+                card.className = 'question-card';
+
+                const choicesHtml = q.choices.map(c => `
+                    <div class="answer ${c.correct ? 'correct' : ''}">
+                        <div class="answer-icon">${c.correct ? '✓' : '•'}</div>
+                        <div class="answer-text">${c.answer || "Risposta multimediale"}</div>
+                    </div>
+                `).join('');
+
+                card.innerHTML = `
+                    <div class="q-number">DOMANDA ${index + 1}</div>
+                    <div class="q-text">${q.question}</div>
+                    <div class="answers">
+                        ${choicesHtml}
+                    </div>
+                `;
+                content.appendChild(card);
+            });
+        }
+
+        function showError(title, msg) {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('title').innerText = title;
+            document.getElementById('quiz-status').innerText = msg;
+        }
+    </script>
+</body>
+</html>
