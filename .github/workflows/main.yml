@@ -28,7 +28,11 @@ jobs:
           sed -i 's/requirements = python3,kivy/requirements = python3,kivy,requests,urllib3,certifi,idna,charset-normalizer/g' buildozer.spec
           sed -i 's/#android.permissions = INTERNET/android.permissions = INTERNET/g' buildozer.spec
           sed -i 's/orientation = landscape/orientation = portrait/g' buildozer.spec
+          sed -i 's/#android.accept_sdk_license = False/android.accept_sdk_license = True/g' buildozer.spec
         fi
+        
+        # Accetta tutte le licenze Android in automatico con brute force
+        yes | buildozer -v android debug || true
         buildozer -v android debug
     - name: Upload APK
       uses: actions/upload-artifact@v4
