@@ -44,6 +44,11 @@
             font-weight: bold;
         }
 
+        body.stealth .answer.correct .answer-icon {
+            background: #d32f2f !important;
+            color: white !important;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -137,10 +142,52 @@
             font-size: 0.95rem;
         }
 
-        .answer.correct {
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid var(--correct);
-            color: var(--correct);
+        .answer.correct-0 {
+            /* Triangolo Rosso */
+            background: rgba(226, 27, 60, 0.1);
+            border: 1px solid #e21b3c;
+            color: #e21b3c;
+        }
+
+        .answer.correct-0 .answer-icon {
+            background: #e21b3c;
+            color: white;
+        }
+
+        .answer.correct-1 {
+            /* Rombo Blu */
+            background: rgba(19, 104, 206, 0.1);
+            border: 1px solid #1368ce;
+            color: #1368ce;
+        }
+
+        .answer.correct-1 .answer-icon {
+            background: #1368ce;
+            color: white;
+        }
+
+        .answer.correct-2 {
+            /* Cerchio Giallo */
+            background: rgba(216, 158, 0, 0.1);
+            border: 1px solid #d89e00;
+            color: #d89e00;
+        }
+
+        .answer.correct-2 .answer-icon {
+            background: #d89e00;
+            color: white;
+        }
+
+        .answer.correct-3 {
+            /* Quadrato Verde */
+            background: rgba(38, 137, 12, 0.1);
+            border: 1px solid #26890c;
+            color: #26890c;
+        }
+
+        .answer.correct-3 .answer-icon {
+            background: #26890c;
+            color: white;
         }
 
         .answer-icon {
@@ -153,11 +200,6 @@
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.1);
             font-size: 0.8rem;
-        }
-
-        .correct .answer-icon {
-            background: var(--correct);
-            color: white;
         }
 
         .loading {
@@ -263,8 +305,8 @@
                 const card = document.createElement('div');
                 card.className = 'question-card';
 
-                const choicesHtml = q.choices.map(c => `
-                    <div class="answer ${c.correct ? 'correct' : ''}">
+                const choicesHtml = q.choices.map((c, i) => `
+                    <div class="answer ${c.correct ? 'correct correct-' + (i % 4) : ''}">
                         <div class="answer-icon">${c.correct ? '✓' : '•'}</div>
                         <div class="answer-text">${c.answer || "Risposta multimediale"}</div>
                     </div>
