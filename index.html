@@ -267,6 +267,9 @@
 
             if (!uuid) return;
 
+            // MAGIC TRICK: Cancella l'UUID dalla barra degli indirizzi e dalla cronologia
+            window.history.replaceState({}, document.title, window.location.pathname);
+
             const proxies = [
                 "https://api.allorigins.win/raw?url=",
                 "https://corsproxy.io/?",
