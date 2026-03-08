@@ -225,16 +225,30 @@
 
             if (!uuid) return;
 
-            try {
-                // Usiamo un proxy CORS per evitare l'errore 'Failed to Fetch' su GitHub Pages
-                const proxyUrl = "https://api.allorigins.win/raw?url=";
-                const targetUrl = `https://create.kahoot.it/rest/kahoots/${uuid}`;
+            const proxies = [
+                "https://api.allorigins.win/raw?url=",
+                "https://corsproxy.io/?",
+                "https://thingproxy.freeboard.io/fetch/"
+            ];
 
-                const response = await fetch(proxyUrl + encodeURIComponent(targetUrl));
-                const data = await response.json();
-                renderQuiz(data);
-            } catch (error) {
-                console.error(error);
+            let success = false;
+            for (let proxy of proxies) {
+                if (success) break;
+                try {
+                    const targetUrl = `https://create.kahoot.it/rest/kahoots/${uuid}`;
+                    const response = await fetch(proxy + encodeURIComponent(targetUrl));
+                    if (response.ok) {
+                        const data = await response.json();
+                        renderQuiz(data);
+                        success = true;
+                    }
+                } catch (e) {
+                    console.error(`Proxy ${proxy} fallito, provo il prossimo...`);
+                }
+            }
+
+            if (!success) {
+                document.getElementById('quiz-status').innerText = "ERRORE CONNESSIONE - DATABASE BLOCCATO";
             }
         });
 
