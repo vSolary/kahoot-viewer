@@ -196,16 +196,45 @@
             const query = searchInput.value.trim();
             if (!query) return;
 
-            resultsDiv.innerHTML = '<div class="status-msg">Interrogazione API globale... 🌐</div>';
+            resultsDiv.innerHTML = '<div class="status-msg">Interrogazione API globale in corso... 🌐</div>';
 
             try {
-                // Trucco ninja: usando allorigins saltiamo il blocco di Kahoot sul browser
-                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://create.kahoot.it/rest/kahoots/?query=${query}&limit=15`)}`;
+                const targetUrl = `https://create.kahoot.it/rest/kahoots/?query=${query}&limit=15`;
                 
-                const response = await fetch(proxyUrl);
-                const data = await response.json();
-                const kahootData = JSON.parse(data.contents);
-                const entities = kahootData.entities || [];
+                // IL TRUCCO DEI TRIPLI PROXY
+                const proxies = [
+                    "https://api.allorigins.win/raw?url=",
+                    "https://corsproxy.io/?",
+                    "https://thingproxy.freeboard.io/fetch/"
+                ];
+
+                let success = false;
+                let data = null;
+
+                for (let proxy of proxies) {
+                    if (success) break;
+                    try {
+                        const response = await fetch(proxy + encodeURIComponent(targetUrl));
+                        if (response.ok) {
+                            data = await response.json();
+                            success = true;
+                        }
+                    } catch (e) {
+                        console.error(`Proxy ${proxy} fallito, passo al prossimo...`);
+                    }
+                }
+
+                if (!success || !data) {
+                    throw new Error("Tutti i proxy falliti");
+                }
+
+                let entities = [];
+                if (data.contents) {
+                     const kahootData = JSON.parse(data.contents);
+                     entities = kahootData.entities || [];
+                } else {
+                     entities = data.entities || [];
+                }
 
                 resultsDiv.innerHTML = '';
 
@@ -229,7 +258,7 @@
                     `;
                 });
             } catch (error) {
-                resultsDiv.innerHTML = `<div class="status-msg error-msg">Errore di connessione. Riprova.</div>`;
+                resultsDiv.innerHTML = `<div class="status-msg error-msg">Errore di rete. I server non rispondono.</div>`;
             }
         }
 
@@ -240,10 +269,10 @@
             resultsDiv.innerHTML = `
                 <div class="link-section">
                     <h3>✅ LINK GENERATO!</h3>
-                    <p style="margin-bottom: 10px; color: var(--text-muted);">Invia questo link al pc (o a un amico)</p>
+                    <p style="margin-bottom: 10px; color: var(--text-muted);">Invia questo link al computer (o a un amico) e aprilo lì.</p>
                     <div class="final-link" id="linkText">${finalUrl}</div>
                     <button class="btn-copy" onclick="copyToClipboard('${finalUrl}')">📋 COPIA IL LINK</button>
-                    <button class="btn-reset" onclick="resetSearch()">🔍 NUOVA RICERCA</button>
+                    <button class="btn-reset" onclick="resetSearch()">🔍 FAI UN'ALTRA RICERCA</button>
                 </div>
             `;
         }
@@ -251,26 +280,4 @@
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(showToast).catch(err => {
                 const linkDiv = document.getElementById('linkText');
-                const range = document.createRange();
-                range.selectNodeContents(linkDiv);
-                window.getSelection().removeAllRanges();
-                window.getSelection().addRange(range);
-                document.execCommand('copy');
-                showToast();
-            });
-        }
-
-        function resetSearch() {
-            searchContainer.style.display = 'block';
-            resultsDiv.innerHTML = '';
-            searchInput.value = '';
-        }
-
-        function showToast() {
-            const toast = document.getElementById("toast");
-            toast.className = "show";
-            setTimeout(() => toast.className = toast.className.replace("show", ""), 3000);
-        }
-    </script>
-</body>
-</html>
+                const range =
