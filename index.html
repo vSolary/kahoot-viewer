@@ -40,7 +40,6 @@
             border: 1px solid #ccc !important;
             background: #f9f9f9 !important;
             color: #d32f2f !important;
-            /* Diventa rosso per confondere se qualcuno guarda da lontano */
             font-weight: bold;
         }
 
@@ -143,7 +142,6 @@
         }
 
         .answer.correct-0 {
-            /* Triangolo Rosso */
             background: rgba(226, 27, 60, 0.1);
             border: 1px solid #e21b3c;
             color: #e21b3c;
@@ -155,7 +153,6 @@
         }
 
         .answer.correct-1 {
-            /* Rombo Blu */
             background: rgba(19, 104, 206, 0.1);
             border: 1px solid #1368ce;
             color: #1368ce;
@@ -167,7 +164,6 @@
         }
 
         .answer.correct-2 {
-            /* Cerchio Giallo */
             background: rgba(216, 158, 0, 0.1);
             border: 1px solid #d89e00;
             color: #d89e00;
@@ -179,7 +175,6 @@
         }
 
         .answer.correct-3 {
-            /* Quadrato Verde */
             background: rgba(38, 137, 12, 0.1);
             border: 1px solid #26890c;
             color: #26890c;
@@ -218,23 +213,13 @@
         }
 
         @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         @media (max-width: 600px) {
-            h1 {
-                font-size: 1.8rem;
-            }
-
-            .question-card {
-                padding: 20px;
-            }
+            h1 { font-size: 1.8rem; }
+            .question-card { padding: 20px; }
         }
     </style>
 </head>
@@ -254,7 +239,6 @@
     </div>
 
     <script>
-        // Modalità Stealth premendo 'S'
         document.addEventListener('keydown', (e) => {
             if (e.key === 's' || e.key === 'S') {
                 document.body.classList.toggle('stealth');
@@ -267,7 +251,6 @@
 
             if (!uuid) return;
 
-            // MAGIC TRICK: Cancella l'UUID dalla barra degli indirizzi e dalla cronologia
             window.history.replaceState({}, document.title, window.location.pathname);
 
             const proxies = [
@@ -279,21 +262,30 @@
             let success = false;
             for (let proxy of proxies) {
                 if (success) break;
+                
+                // IL TIMER SPIETATO: Se un server free ci mette più di 3.5 secondi lo uccidiamo e passiamo al prossimo
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3500);
+                
                 try {
                     const targetUrl = `https://create.kahoot.it/rest/kahoots/${uuid}`;
-                    const response = await fetch(proxy + encodeURIComponent(targetUrl));
+                    const response = await fetch(proxy + encodeURIComponent(targetUrl), { signal: controller.signal });
+                    clearTimeout(timeoutId); // Si è sbrigato, cancelliamo il timer
+                    
                     if (response.ok) {
                         const data = await response.json();
                         renderQuiz(data);
                         success = true;
                     }
                 } catch (e) {
-                    console.error(`Proxy ${proxy} fallito, provo il prossimo...`);
+                    clearTimeout(timeoutId);
+                    console.error(`Il server ${proxy} dormiva, passo istantaneamente al prossimo!`);
                 }
             }
 
             if (!success) {
-                document.getElementById('quiz-status').innerText = "ERRORE CONNESSIONE - DATABASE BLOCCATO";
+                document.getElementById('quiz-status').innerText = "ERRORE CON LA RETE - RIPROVA ORA";
+                document.getElementById('loader').style.display = 'none';
             }
         });
 
@@ -303,6 +295,7 @@
             document.getElementById('loader').style.display = 'none';
 
             const content = document.getElementById('quiz-content');
+            content.innerHTML = ''; // Pulizia sicurezza
 
             data.questions.forEach((q, index) => {
                 const card = document.createElement('div');
@@ -325,13 +318,6 @@
                 content.appendChild(card);
             });
         }
-
-        function showError(title, msg) {
-            document.getElementById('loader').style.display = 'none';
-            document.getElementById('title').innerText = title;
-            document.getElementById('quiz-status').innerText = msg;
-        }
     </script>
 </body>
-
 </html>
