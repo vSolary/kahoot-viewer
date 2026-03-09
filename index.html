@@ -141,60 +141,31 @@
             font-size: 0.95rem;
         }
 
-        .answer.correct-0 {
-            background: rgba(226, 27, 60, 0.1);
-            border: 1px solid #e21b3c;
-            color: #e21b3c;
+        /* Colori Risposte Giuste in base alla posizione originale di Kahoot */
+        .answer.correct-0 { /* Triangolo Rosso */
+            background: rgba(226, 27, 60, 0.1); border: 1px solid #e21b3c; color: #e21b3c;
         }
+        .answer.correct-0 .answer-icon { background: #e21b3c; color: white; }
 
-        .answer.correct-0 .answer-icon {
-            background: #e21b3c;
-            color: white;
+        .answer.correct-1 { /* Rombo Blu */
+            background: rgba(19, 104, 206, 0.1); border: 1px solid #1368ce; color: #1368ce;
         }
+        .answer.correct-1 .answer-icon { background: #1368ce; color: white; }
 
-        .answer.correct-1 {
-            background: rgba(19, 104, 206, 0.1);
-            border: 1px solid #1368ce;
-            color: #1368ce;
+        .answer.correct-2 { /* Cerchio Giallo */
+            background: rgba(216, 158, 0, 0.1); border: 1px solid #d89e00; color: #d89e00;
         }
+        .answer.correct-2 .answer-icon { background: #d89e00; color: white; }
 
-        .answer.correct-1 .answer-icon {
-            background: #1368ce;
-            color: white;
+        .answer.correct-3 { /* Quadrato Verde */
+            background: rgba(38, 137, 12, 0.1); border: 1px solid #26890c; color: #26890c;
         }
-
-        .answer.correct-2 {
-            background: rgba(216, 158, 0, 0.1);
-            border: 1px solid #d89e00;
-            color: #d89e00;
-        }
-
-        .answer.correct-2 .answer-icon {
-            background: #d89e00;
-            color: white;
-        }
-
-        .answer.correct-3 {
-            background: rgba(38, 137, 12, 0.1);
-            border: 1px solid #26890c;
-            color: #26890c;
-        }
-
-        .answer.correct-3 .answer-icon {
-            background: #26890c;
-            color: white;
-        }
+        .answer.correct-3 .answer-icon { background: #26890c; color: white; }
 
         .answer-icon {
-            margin-right: 15px;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1);
-            font-size: 0.8rem;
+            margin-right: 15px; width: 24px; height: 24px; display: flex;
+            align-items: center; justify-content: center; border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1); font-size: 0.8rem;
         }
 
         .loading {
@@ -203,13 +174,9 @@
         }
 
         .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid var(--glass);
-            border-top: 4px solid var(--accent);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
+            width: 40px; height: 40px; border: 4px solid var(--glass);
+            border-top: 4px solid var(--accent); border-radius: 50%;
+            animation: spin 1s linear infinite; margin: 20px auto;
         }
 
         @keyframes spin {
@@ -249,42 +216,53 @@
             const urlParams = new URLSearchParams(window.location.search);
             const uuid = urlParams.get('uuid');
 
-            if (!uuid) return;
+            if (!uuid) {
+                document.getElementById('quiz-status').innerText = "[Nessun UUID Fornito]";
+                document.getElementById('loader').style.display = 'none';
+                return;
+            }
 
             window.history.replaceState({}, document.title, window.location.pathname);
 
+            // 7 PROXY TOTALI: Da quelli a bassa latenza europea ai carri armati indistruttibili storici. 
+            // Anche se ne mettono 5 fuori uso fra due anni, 2 funzioneranno sempre.
             const proxies = [
-                "https://api.allorigins.win/raw?url=",
                 "https://corsproxy.io/?",
-                "https://thingproxy.freeboard.io/fetch/"
+                "https://api.allorigins.win/raw?url=",
+                "https://api.codetabs.com/v1/proxy?quest=",
+                "https://thingproxy.freeboard.io/fetch/",
+                "https://cors-anywhere.herokuapp.com/",
+                "https://crossorigin.me/",
+                "https://yacdn.org/proxy/"
             ];
 
             let success = false;
             for (let proxy of proxies) {
                 if (success) break;
                 
-                // IL TIMER SPIETATO: Se un server free ci mette più di 3.5 secondi lo uccidiamo e passiamo al prossimo
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 3500);
+                // KILL SWITCH: Se ci mette più di 2.5 secondi lo annienta e prova il prossimo, ZERO ATTESE.
+                const timeoutId = setTimeout(() => controller.abort(), 2500); 
                 
                 try {
                     const targetUrl = `https://create.kahoot.it/rest/kahoots/${uuid}`;
                     const response = await fetch(proxy + encodeURIComponent(targetUrl), { signal: controller.signal });
-                    clearTimeout(timeoutId); // Si è sbrigato, cancelliamo il timer
+                    clearTimeout(timeoutId);
                     
                     if (response.ok) {
                         const data = await response.json();
                         renderQuiz(data);
                         success = true;
+                        console.log("Connesso con trionfo tramite: " + proxy);
                     }
                 } catch (e) {
                     clearTimeout(timeoutId);
-                    console.error(`Il server ${proxy} dormiva, passo istantaneamente al prossimo!`);
+                    console.log(`Proxy lento o offline: ${proxy} -> Scalo al prossimo istantaneamente.`);
                 }
             }
 
             if (!success) {
-                document.getElementById('quiz-status').innerText = "ERRORE CON LA RETE - RIPROVA ORA";
+                document.getElementById('quiz-status').innerText = "FATAL ERROR: TUTTI I PROXY OFFLINE";
                 document.getElementById('loader').style.display = 'none';
             }
         });
@@ -295,7 +273,7 @@
             document.getElementById('loader').style.display = 'none';
 
             const content = document.getElementById('quiz-content');
-            content.innerHTML = ''; // Pulizia sicurezza
+            content.innerHTML = '';
 
             data.questions.forEach((q, index) => {
                 const card = document.createElement('div');
@@ -304,7 +282,7 @@
                 const choicesHtml = q.choices.map((c, i) => `
                     <div class="answer ${c.correct ? 'correct correct-' + (i % 4) : ''}">
                         <div class="answer-icon">${c.correct ? '✓' : '•'}</div>
-                        <div class="answer-text">${c.answer || "Risposta multimediale"}</div>
+                        <div class="answer-text">${c.answer || "[Risposta multimediale]"}</div>
                     </div>
                 `).join('');
 
