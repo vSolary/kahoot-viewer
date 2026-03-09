@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kahoot! Ninja App</title>
+    <!-- Colore della barra di stato su Android -->
+    <meta name="theme-color" content="#0f172a">
+    
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --text-white: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-white);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px 0 30px 0;
+        }
+
+        h1 {
+            color: var(--accent-blue);
+            font-size: 2.2rem;
+            font-weight: 800;
+        }
+
+        .search-container {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 16px;
+            background-color: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 12px;
+            color: var(--text-white);
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        button:active { transform: scale(0.98); }
+
+        .btn-search {
+            background-color: var(--accent-blue);
+            color: white;
+            box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
+        }
+
+        #results {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding-bottom: 20px;
+        }
+
+        .result-card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+        }
+
+        .result-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .btn-link {
+            background-color: var(--accent-green);
+            color: white;
+            box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.39);
+        }
+
+        .status-msg {
+            text-align: center;
+            font-size: 1.1rem;
+            padding: 20px;
+            color: var(--text-muted);
+        }
+
+        .error-msg { color: #ef4444; }
+
+        .link-section {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 25px 20px;
+            text-align: center;
+            border: 2px dashed var(--accent-green);
+        }
+
+        .link-section h3 {
+            color: var(--accent-green);
+            margin-bottom: 15px;
+        }
+
+        .final-link {
+            background-color: #0f172a;
+            padding: 15px;
+            border-radius: 8px;
+            word-break: break-all;
+            color: var(--text-white);
+            margin-bottom: 15px;
+            user-select: all;
+        }
+
+        .btn-copy { background-color: var(--accent-blue); color: white; margin-bottom: 10px; }
+        .btn-reset { background-color: #475569; color: white; }
+
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            margin-left: -125px;
+            background-color: #10b981;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1;
+            left: 50%;
+            bottom: 30px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s, bottom 0.3s;
+        }
+
+        #toast.show { visibility: visible; opacity: 1; bottom: 50px; }
+    </style>
+</head>
+<body>
+
+    <header><h1>Kahoot! Ninja</h1></header>
+
+    <div class="search-container" id="searchContainer">
+        <input type="text" id="searchInput" placeholder="Titolo del Quiz..." onkeypress="handleKeyPress(event)">
+        <button class="btn-search" onclick="searchDatabase()">CERCA NEL SERVER</button>
+    </div>
+
+    <div id="results"></div>
+    <div id="toast">✅ Link Copiato!</div>
+
+    <script>
+        // IL LINK ALLA TUA PAGINA SEGRETA
+        const BASE_WEB_URL = "https://vSolary.github.io/kahoot-viewer/";
+
+        const searchInput = document.getElementById('searchInput');
+        const resultsDiv = document.getElementById('results');
+        const searchContainer = document.getElementById('searchContainer');
+
+        function handleKeyPress(e) { if (e.key === 'Enter') searchDatabase(); }
+
+        async function searchDatabase() {
+            const query = searchInput.value.trim();
+            if (!query) return;
+
+            resultsDiv.innerHTML = '<div class="status-msg">Interrogazione API globale... 🌐</div>';
+
+            try {
+                // Trucco ninja: usando allorigins saltiamo il blocco di Kahoot sul browser
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://create.kahoot.it/rest/kahoots/?query=${query}&limit=15`)}`;
+                
+                const response = await fetch(proxyUrl);
+                const data = await response.json();
+                const kahootData = JSON.parse(data.contents);
+                const entities = kahootData.entities || [];
+
+                resultsDiv.innerHTML = '';
+
+                if (entities.length === 0) {
+                    resultsDiv.innerHTML = '<div class="status-msg error-msg">Nessun quiz pubblico trovato.</div>';
+                    return;
+                }
+
+                entities.forEach(item => {
+                    const card = item.card || item;
+                    const title = card.title || 'Unknown';
+                    const uuid = card.uuid;
+
+                    resultsDiv.innerHTML += `
+                        <div class="result-card">
+                            <div class="result-title">${title}</div>
+                            <button class="btn-link" onclick="createNinjaLink('${uuid}')">
+                                🚀 CREA LINK NINJA
+                            </button>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="status-msg error-msg">Errore di connessione. Riprova.</div>`;
+            }
+        }
+
+        function createNinjaLink(uuid) {
+            const finalUrl = `${BASE_WEB_URL}?uuid=${uuid}`;
+            searchContainer.style.display = 'none';
+
+            resultsDiv.innerHTML = `
+                <div class="link-section">
+                    <h3>✅ LINK GENERATO!</h3>
+                    <p style="margin-bottom: 10px; color: var(--text-muted);">Invia questo link al pc (o a un amico)</p>
+                    <div class="final-link" id="linkText">${finalUrl}</div>
+                    <button class="btn-copy" onclick="copyToClipboard('${finalUrl}')">📋 COPIA IL LINK</button>
+                    <button class="btn-reset" onclick="resetSearch()">🔍 NUOVA RICERCA</button>
+                </div>
+            `;
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(showToast).catch(err => {
+                const linkDiv = document.getElementById('linkText');
+                const range = document.createRange();
+                range.selectNodeContents(linkDiv);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+                document.execCommand('copy');
+                showToast();
+            });
+        }
+
+        function resetSearch() {
+            searchContainer.style.display = 'block';
+            resultsDiv.innerHTML = '';
+            searchInput.value = '';
+        }
+
+        function showToast() {
+            const toast = document.getElementById("toast");
+            toast.className = "show";
+            setTimeout(() => toast.className = toast.className.replace("show", ""), 3000);
+        }
+    </script>
+</body>
+</html>
